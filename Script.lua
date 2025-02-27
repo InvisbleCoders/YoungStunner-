@@ -1,40 +1,54 @@
--- Load required libraries
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TeleportService = game:GetService("TeleportService")
+-- Configuration
+local highChestOnly = true -- Set to true to only target high-value chests
+local teleportDelay = 1 -- Delay between teleport attempts (in seconds)
 
--- Function to deal insane damage
-local function fuckUpIceAdmiral()
-    local iceAdmiral = workspace:FindFirstChild("Ice Admiral")
-    if iceAdmiral then
-        local humanoid = iceAdmiral:FindFirstChild("Humanoid")
-        if humanoid then
-            while humanoid.Health > 0 do
-                local args = {
-                    [1] = "Ice Admiral",
-                    [2] = math.huge, -- Insane damage
-                    [3] = false
-                }
-                ReplicatedStorage.Remotes.Damage:FireServer(unpack(args))
-                wait(0.1) -- Adjust delay to avoid detection
+-- Function to find and teleport to chests
+local function teleportToChest()
+    while true do
+        task.wait(teleportDelay) -- Wait for the specified delay
+
+        -- Check if the player's character exists
+        if not game.Players.LocalPlayer.Character then
+            continue
+        end
+
+        -- Find chests in the workspace
+        local chests = {}
+        if highChestOnly then
+            -- Add high-value chest names here
+            chests = {
+                "HighChest",
+                "LegendaryChest",
+                "EpicChest"
+            }
+        else
+            -- Add all chest names here
+            chests = {
+                "Chest",
+                "HighChest",
+                "LegendaryChest",
+                "EpicChest"
+            }
+        end
+
+        -- Search for chests in the workspace
+        local targetChest = nil
+        for _, chestName in pairs(chests) do
+            targetChest = game.Workspace:FindFirstChild(chestName)
+            if targetChest then
+                break
             end
         end
-    end
-end
 
--- Function to hop servers
-local function hopServer()
-    local serverList = game:GetService("HttpService"):JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
-    for _, server in pairs(serverList.data) do
-        if server.playing < server.maxPlayers and server.id ~= game.JobId then
-            TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id)
-            break
+        -- Teleport to the chest if found
+        if targetChest then
+            game.Players.LocalPlayer.Character:PivotTo(targetChest:GetPivot())
+            firesignal(targetChest.Touched, game.Players.LocalPlayer.Character.HumanoidRootPart)
+        else
+            warn("No chest found. Retrying...")
         end
     end
 end
 
--- Main execution
-fuckUpIceAdmiral()
-wait(5) -- Wait for the boss to die
-hopServer()
+-- Start the teleportation process
+teleportToChest()
